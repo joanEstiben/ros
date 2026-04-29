@@ -26,8 +26,32 @@ def _headers(token):
     return {'Authorization': f'Bearer {token}'}
 
 
+def _clear_list(token, book_id):
+    """Elimina todos los contactos de la lista en SendPulse."""
+    # Obtener todos los emails actuales en la lista
+    resp = requests.get(
+        f'{_SP_BASE}/addressbooks/{book_id}/emails',
+        headers=_headers(token),
+        timeout=15,
+    )
+    if not resp.ok:
+        raise RuntimeError(f'Error obteniendo contactos: {resp.status_code} {resp.text}')
+    data = resp.json()
+    emails = [e['email'] for e in data] if isinstance(data, list) else []
+    if not emails:
+        return
+    resp = requests.delete(
+        f'{_SP_BASE}/addressbooks/{book_id}/emails',
+        json={'emails': emails},
+        headers=_headers(token),
+        timeout=15,
+    )
+    if not resp.ok:
+        raise RuntimeError(f'Error eliminando contactos: {resp.status_code} {resp.text}')
+
+
 def _sync_clientes(token, book_id):
-    """Agrega/actualiza todos los clientes activos en la lista de SendPulse."""
+    """Reemplaza la lista de SendPulse con los clientes activos actuales."""
     from users.infrastructure.models import UserModel
     clientes = list(
         UserModel.objects.filter(activo=True, rol__nombre__iexact='CLIENTE')
@@ -36,6 +60,8 @@ def _sync_clientes(token, book_id):
     if not clientes:
         return 0
 
+    _clear_list(token, book_id)
+
     emails = [
         {
             'email': c['email'],
@@ -43,7 +69,6 @@ def _sync_clientes(token, book_id):
         }
         for c in clientes
     ]
-
     resp = requests.post(
         f'{_SP_BASE}/addressbooks/{book_id}/emails',
         json={'emails': emails},
