@@ -30,17 +30,15 @@ SECRET_KEY = (
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver', '.up.railway.app']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver', 'rospython-production.up.railway.app']
 _extra = os.environ.get('ALLOWED_HOSTS', '')
 if _extra:
     ALLOWED_HOSTS += [h.strip() for h in _extra.split(',') if h.strip()]
-_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
-if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(_railway_domain)
 
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1', 'http://localhost', 'https://*.up.railway.app'] + [
-    f'https://{h}' for h in ALLOWED_HOSTS
-    if h not in ('127.0.0.1', 'localhost', 'testserver', '.up.railway.app')
+CSRF_TRUSTED_ORIGINS = [
+    'http://127.0.0.1',
+    'http://localhost',
+    'https://rospython-production.up.railway.app',
 ]
 
 INSTALLED_APPS = [
