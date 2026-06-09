@@ -30,7 +30,7 @@ SECRET_KEY = (
 
 DEBUG = os.environ.get('DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver']
+ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver', '.up.railway.app']
 _extra = os.environ.get('ALLOWED_HOSTS', '')
 if _extra:
     ALLOWED_HOSTS += [h.strip() for h in _extra.split(',') if h.strip()]
@@ -38,9 +38,9 @@ _railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
 if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(_railway_domain)
 
-CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1', 'http://localhost'] + [
+CSRF_TRUSTED_ORIGINS = ['http://127.0.0.1', 'http://localhost', 'https://*.up.railway.app'] + [
     f'https://{h}' for h in ALLOWED_HOSTS
-    if h not in ('127.0.0.1', 'localhost', 'testserver')
+    if h not in ('127.0.0.1', 'localhost', 'testserver', '.up.railway.app')
 ]
 
 INSTALLED_APPS = [
@@ -92,27 +92,25 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Si Railway provee DATABASE_URL la usa directamente.
 # Si no, construye la URL desde las variables individuales POSTGRES_*.
 _DATABASE_URL = os.environ.get('DATABASE_URL', '')
-if _DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=_DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=not DEBUG,
-        )
-    }
-else:
-    _pg_user = os.environ.get('POSTGRES_USER', 'postgres')
-    _pg_pass = os.environ.get('POSTGRES_PASSWORD', '101606')
-    _pg_host = os.environ.get('POSTGRES_HOST', '127.0.0.1')
-    _pg_port = os.environ.get('POSTGRES_PORT', '5432')
-    _pg_db   = os.environ.get('POSTGRES_DB', 'ROS_db')
-    DATABASES = {
-        'default': dj_database_url.config(
-            default=f'postgresql://{_pg_user}:{_pg_pass}@{_pg_host}:{_pg_port}/{_pg_db}',
-            conn_max_age=600,
-            ssl_require=False,
-        )
-    }
+_pg_user = os.environ.get('POSTGRES_USER', 'postgres')
+_pg_pass = os.environ.get('POSTGRES_PASSWORD', '101606')
+_pg_host = os.environ.get('POSTGRES_HOST', '127.0.0.1')
+_pg_port = os.environ.get('POSTGRES_PORT', '5432')
+_pg_db   = os.environ.get('POSTGRES_DB', 'ROS_db')
+_fallback_url = f'postgresql://{_pg_user}:{_pg_pass}@{_pg_host}:{_pg_port}/{_pg_db}'
+
+# Validar que DATABASE_URL tenga esquema real (ej: postgresql://...)
+import urllib.parse as _urlparse
+_parsed = _urlparse.urlparse(_DATABASE_URL)
+_valid_url = _parsed.scheme and _parsed.scheme != '' and _parsed.netloc
+
+DATABASES = {
+    'default': dj_database_url.parse(
+        _DATABASE_URL if _valid_url else _fallback_url,
+        conn_max_age=600,
+        ssl_require=(_valid_url and not DEBUG),
+    )
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
