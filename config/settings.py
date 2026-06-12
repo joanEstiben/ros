@@ -190,7 +190,7 @@ LOGOUT_REDIRECT_URL = '/login/'
 AUTH_USER_MODEL = 'users.User'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
+#push
 
 # --- CONFIGURACIÓN DE CORREO EVITA ERROR 500 ---
 # Forzamos temporalmente a que imprima los correos en la consola para saltarnos el bloqueo de Gmail
