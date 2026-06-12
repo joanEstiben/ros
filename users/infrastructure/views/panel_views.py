@@ -324,23 +324,20 @@ def home_redirect_view(request):
     if not request.user.is_authenticated:
         return redirect('login')
     rol = _rol_upper(request.user)
-    if rol == 'ADMINISTRADOR':
+    if rol == 'ADMINISTRADOR' or request.user.is_superuser or request.user.is_staff:
         return redirect('admin_dashboard')
     if rol == 'EMPLEADO':
         return redirect('pedidos_asignados')
     if rol == 'CLIENTE':
         return redirect('mi_perfil')
-    # Superusuario sin rol asignado -> dashboard Django admin
-    if request.user.is_superuser:
-        return redirect('/admin/')
     return redirect('login')
 
 
 @login_required(login_url='/login/')
 def admin_dashboard_view(request):
     rol = _rol_upper(request.user)
-    if rol != 'ADMINISTRADOR':
-        messages.warning(request, 'No tienes permiso para acceder a esa sección.')
+    es_admin = rol == 'ADMINISTRADOR' or request.user.is_superuser or request.user.is_staff
+    if not es_admin:
         if rol == 'EMPLEADO':
             return redirect('pedidos_asignados')
         if rol == 'CLIENTE':

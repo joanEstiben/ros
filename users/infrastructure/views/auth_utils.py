@@ -1,34 +1,19 @@
-from django.conf import settings
-from django.shortcuts import resolve_url
-from django.urls import NoReverseMatch
+from django.urls import reverse
 
 
 def post_login_redirect_url(user):
-    """Destino tras login según rol (nombres en BD: ADMINISTRADOR, CLIENTE, EMPLEADO)."""
+    """Destino tras login según rol."""
+    # Superusuario sin rol -> dashboard del proyecto
+    if user.is_superuser or user.is_staff:
+        from django.urls import reverse
+        return reverse('admin_dashboard')
+
     r = getattr(user, 'rol', None)
     nombre = (r.nombre or '').strip().upper() if r else ''
     if nombre in ('ADMIN', 'ADMINISTRADOR'):
-        nombre = 'ADMINISTRADOR'
-
-    if nombre == 'ADMINISTRADOR':
-        try:
-            return resolve_url('admin_dashboard')
-        except NoReverseMatch:
-            return '/dashboard/'
-    if user.is_superuser:
-        try:
-            return resolve_url('admin:index')
-        except NoReverseMatch:
-            return '/admin/'
+        return reverse('admin_dashboard')
     if nombre == 'CLIENTE':
-        try:
-            return resolve_url('mi_perfil')
-        except NoReverseMatch:
-            return '/mi-perfil/'
+        return reverse('mi_perfil')
     if nombre == 'EMPLEADO':
-        try:
-            return resolve_url('mi_horario')
-        except NoReverseMatch:
-            return '/mi-horario/'
-
-    return resolve_url('login')
+        return reverse('pedidos_asignados')
+    return reverse('login')

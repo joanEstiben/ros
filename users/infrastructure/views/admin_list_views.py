@@ -191,12 +191,14 @@ def admin_only(view_func):
     @wraps(view_func)
     @login_required(login_url='/login/')
     def _wrapped(request, *args, **kwargs):
-        if _rol_upper(request.user) != 'ADMINISTRADOR':
+        rol = _rol_upper(request.user)
+        es_admin = rol == 'ADMINISTRADOR' or request.user.is_superuser or request.user.is_staff
+        if not es_admin:
             messages.warning(request, 'No tienes permiso para acceder a esa sección.')
-            rol = _rol_upper(request.user)
-            return redirect('pedidos_asignados') if rol == 'EMPLEADO' else redirect('mi_perfil')
+            if rol == 'EMPLEADO':
+                return redirect('pedidos_asignados')
+            return redirect('mi_perfil')
         return view_func(request, *args, **kwargs)
-
     return _wrapped
 
 
