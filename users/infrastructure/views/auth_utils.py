@@ -5,7 +5,6 @@ def post_login_redirect_url(user):
     """Destino tras login según rol."""
     # Superusuario sin rol -> dashboard del proyecto
     if user.is_superuser or user.is_staff:
-        from django.urls import reverse
         return reverse('admin_dashboard')
 
     r = getattr(user, 'rol', None)
