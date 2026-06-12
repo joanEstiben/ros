@@ -45,36 +45,23 @@ SECRET_KEY = os.environ.get(
     'django-insecure-dev-only-set-DJANGO_SECRET_KEY-in-env',
 )
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'true').lower() in ('1', 'true', 'yes')
+# --- FORZAMOS DEBUG TRUE PARA VER LA PANTALLA AMARILLA ---
+DEBUG = True
 
-# Evita "Invalid HTTP_HOST" en local y permite enlaces de recuperación con 127.0.0.1 o localhost.
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', 'testserver'] + [
-    h.strip() for h in os.environ.get('ALLOWED_HOSTS', '').split(',') if h.strip()
+# Permitimos todos los hosts para evitar bloqueos mientras probamos
+ALLOWED_HOSTS = ['*']
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.up.railway.app',
+    'https://*.railway.app',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
 ]
 
-# En producción acepta cualquier host y confía en dominios HTTPS
-if not DEBUG:
-    ALLOWED_HOSTS += ['*']
-    # Siempre incluir wildcards de Railway más cualquier dominio extra en CSRF_TRUSTED_ORIGINS
-    _extra_trusted = [
-        f'https://{h.strip()}'
-        for h in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
-        if h.strip()
-    ]
-    CSRF_TRUSTED_ORIGINS = [
-        'https://*.up.railway.app',
-        'https://*.railway.app',
-    ] + _extra_trusted
-    # Asegurar cookies seguras detrás del proxy de Railway
-    CSRF_COOKIE_SECURE = True
-    SESSION_COOKIE_SECURE = True
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-else:
-    CSRF_TRUSTED_ORIGINS = [
-        'http://127.0.0.1:8000',
-        'http://localhost:8000',
-    ]
+# Desactivamos temporalmente la seguridad estricta de cookies para que no falle el login desde celular en las pruebas
+CSRF_COOKIE_SECURE = False
+SESSION_COOKIE_SECURE = False
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Application definition
