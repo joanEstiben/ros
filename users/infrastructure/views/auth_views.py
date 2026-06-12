@@ -298,9 +298,7 @@ def register_view(request):
             messages.error(request, str(exc))
             return render(request, 'auth/register.html', {'posted': posted}, status=400)
 
-        user = UserModel.objects.get(email__iexact=email.lower())
-        login(request, user)
-        messages.success(request, '¡Cuenta creada! Ya puedes usar el sistema.')
+        messages.success(request, '¡Cuenta creada! Inicia sesión con tus credenciales.')
 
         # Enviar bienvenida + promociones actuales al nuevo cliente
         try:
@@ -317,7 +315,7 @@ def register_view(request):
             if getattr(django_settings, 'DEBUG', False):
                 print('SendPulse registro error:', exc)
 
-        return redirect(post_login_redirect_url(user))
+        return redirect('login')
 
     return render(request, 'auth/register.html', {'posted': None})
 
