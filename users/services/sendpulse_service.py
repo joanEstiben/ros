@@ -29,36 +29,37 @@ def _headers(token: str) -> dict:
 
 
 def _send_email(to_email: str, to_name: str, subject: str, html: str) -> dict:
-    """Envía un correo individual e inmediato usando el servicio transaccional (SMTP) de SendPulse."""
+    """Envía el correo usando la lista fija 633081 que ya tiene contactos activos."""
     token = _get_token()
+    book_id = 633081  # ID real de tu lista "My emails"
     
-    # Payload optimizado para la API de correos transaccionales de SendPulse
-    email_data = {
-        'email': {
-            'html': base64.b64encode(html.encode('utf-8')).decode('ascii'),
-            'subject': subject,
-            'from': {
-                'name': settings.SENDPULSE_FROM_NAME,
-                'email': settings.SENDPULSE_FROM_EMAIL,
-            },
-            'to': [
-                {
-                    'name': to_name,
-                    'email': to_email,
-                }
-            ],
-        }
+    # 1. Agregamos (o actualizamos) al cliente en tu lista fija para asegurar que exista
+    requests.post(
+        f'{_SP_BASE}/addressbooks/{book_id}/emails',
+        json={'emails': [{'email': to_email, 'variables': {'nombre': to_name}}]},
+        headers=_headers(token),
+        timeout=10,
+    )
+
+    # 2. Creamos la campaña apuntando a la lista fija, pero filtrando solo para este email
+    campaign = {
+        'sender_name': settings.SENDPULSE_FROM_NAME,
+        'sender_email': settings.SENDPULSE_FROM_EMAIL,
+        'subject': subject,
+        'body': base64.b64encode(html.encode('utf-8')).decode('ascii'),
+        'list_id': book_id,
+        'send_to_email': to_email  # Esto evita que se le envíe a los otros 8 contactos
     }
     
     resp = requests.post(
-        f'{_SP_BASE}/smtp/emails',
-        json=email_data,
+        f'{_SP_BASE}/campaigns',
+        json=campaign,
         headers=_headers(token),
         timeout=15,
     )
     
     if not resp.ok:
-        raise RuntimeError(f'Error enviando correo transaccional: {resp.status_code} {resp.text}')
+        raise RuntimeError(f'Error creando campaña: {resp.status_code} {resp.text}')
         
     return resp.json()
 
@@ -267,7 +268,7 @@ def enviar_correo_pago_rechazado(pago) -> bool:
     motivo = pago.motivo_rechazo or 'No especificado'
 
     html = _build_html(
-        titulo='&#10007; Pago grid-Rechazado',
+        titulo='&#10007; Pago Rechazado',
         mensaje=(
             f'Hola <strong>{nombre}</strong>,<br><br>'
             'Tu pago fue rechazado.<br><br>'
@@ -285,4 +286,3 @@ def enviar_correo_pago_rechazado(pago) -> bool:
     except RuntimeError as exc:
         logger.error('Error enviando rechazo pago %s: %s', pago.pk, exc)
         return False
-    #uwuuuuuuuu
