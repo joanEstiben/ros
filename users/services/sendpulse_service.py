@@ -29,11 +29,7 @@ def _headers(token: str) -> dict:
 
 
 def _send_email(to_email: str, to_name: str, subject: str, html: str) -> dict:
-    """
-    Envía un correo individual directo usando el endpoint SMTP general.
-    Nota: Si este endpoint falla por falta de activación en tu cuenta gratuita,
-    la única solución real en SendPulse es darle clic al botón verde de tu imagen.
-    """
+    """Envía un correo transaccional directo sin usar el sistema de campañas."""
     token = _get_token()
     
     email_data = {
