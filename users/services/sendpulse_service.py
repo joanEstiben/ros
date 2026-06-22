@@ -29,37 +29,39 @@ def _headers(token: str) -> dict:
 
 
 def _send_email(to_email: str, to_name: str, subject: str, html: str) -> dict:
-    """Envía el correo usando la lista fija 633081 que ya tiene contactos activos."""
+    """
+    Envía un correo individual directo usando el endpoint SMTP general.
+    Nota: Si este endpoint falla por falta de activación en tu cuenta gratuita,
+    la única solución real en SendPulse es darle clic al botón verde de tu imagen.
+    """
     token = _get_token()
-    book_id = 633081  # ID real de tu lista "My emails"
     
-    # 1. Agregamos (o actualizamos) al cliente en tu lista fija para asegurar que exista
-    requests.post(
-        f'{_SP_BASE}/addressbooks/{book_id}/emails',
-        json={'emails': [{'email': to_email, 'variables': {'nombre': to_name}}]},
-        headers=_headers(token),
-        timeout=10,
-    )
-
-    # 2. Creamos la campaña apuntando a la lista fija, pero filtrando solo para este email
-    campaign = {
-        'sender_name': settings.SENDPULSE_FROM_NAME,
-        'sender_email': settings.SENDPULSE_FROM_EMAIL,
-        'subject': subject,
-        'body': base64.b64encode(html.encode('utf-8')).decode('ascii'),
-        'list_id': book_id,
-        'send_to_email': to_email  # Esto evita que se le envíe a los otros 8 contactos
+    email_data = {
+        'email': {
+            'html': base64.b64encode(html.encode('utf-8')).decode('ascii'),
+            'subject': subject,
+            'from': {
+                'name': settings.SENDPULSE_FROM_NAME,
+                'email': settings.SENDPULSE_FROM_EMAIL,
+            },
+            'to': [
+                {
+                    'name': to_name,
+                    'email': to_email,
+                }
+            ],
+        }
     }
     
     resp = requests.post(
-        f'{_SP_BASE}/campaigns',
-        json=campaign,
+        f'{_SP_BASE}/smtp/emails',
+        json=email_data,
         headers=_headers(token),
         timeout=15,
     )
     
     if not resp.ok:
-        raise RuntimeError(f'Error creando campaña: {resp.status_code} {resp.text}')
+        raise RuntimeError(f'Error en envío directo: {resp.status_code} {resp.text}')
         
     return resp.json()
 
@@ -89,7 +91,6 @@ def _build_html(titulo: str, mensaje: str, color_acento: str) -> str:
 
 
 def _get_destinatario(reserva) -> tuple | None:
-    """Retorna (email, nombre). Soporta usuarios autenticados y clientes públicos."""
     if reserva.user_id:
         from users.infrastructure.models import UserModel
         try:
@@ -105,7 +106,6 @@ def _get_destinatario(reserva) -> tuple | None:
 
 
 def enviar_correo_confirmacion(reserva) -> bool:
-    """Envía correo de confirmación cuando el admin acepta la reserva."""
     destinatario = _get_destinatario(reserva)
     if not destinatario:
         logger.warning('Reserva %s sin email: no se envió confirmación.', reserva.pk)
@@ -137,7 +137,6 @@ def enviar_correo_confirmacion(reserva) -> bool:
 
 
 def enviar_correo_rechazo(reserva) -> bool:
-    """Envía correo de rechazo cuando el admin cancela la reserva."""
     destinatario = _get_destinatario(reserva)
     if not destinatario:
         logger.warning('Reserva %s sin email: no se envió rechazo.', reserva.pk)
@@ -169,7 +168,6 @@ def enviar_correo_rechazo(reserva) -> bool:
 # ── Notificaciones de PAGOS ──────────────────────────────────────────────────
 
 def _get_email_pago(pago) -> tuple | None:
-    """Resuelve (email, nombre) del cliente del pago."""
     if pago.email_cliente:
         nombre = (pago.pedido.cliente_nombre or 'Cliente') if pago.pedido_id else 'Cliente'
         return pago.email_cliente, nombre
@@ -186,7 +184,6 @@ def _get_email_pago(pago) -> tuple | None:
 
 
 def _build_factura_html(pago) -> str:
-    """Genera el HTML de la factura con el detalle del pedido."""
     pedido = pago.pedido
     nombre = pedido.cliente_nombre or 'Cliente'
     detalles = pedido.detalles.select_related('producto').all()
@@ -239,7 +236,6 @@ def _build_factura_html(pago) -> str:
 
 
 def enviar_correo_pago_aprobado(pago) -> bool:
-    """Envía factura por correo cuando el admin aprueba el pago."""
     destinatario = _get_email_pago(pago)
     if not destinatario:
         logger.warning('Pago %s sin email: no se envió factura.', pago.pk)
@@ -258,7 +254,6 @@ def enviar_correo_pago_aprobado(pago) -> bool:
 
 
 def enviar_correo_pago_rechazado(pago) -> bool:
-    """Envía correo de rechazo con motivo cuando el admin rechaza el pago."""
     destinatario = _get_email_pago(pago)
     if not destinatario:
         logger.warning('Pago %s sin email: no se envió rechazo.', pago.pk)
