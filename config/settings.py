@@ -205,7 +205,7 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 PASSWORD_RESET_TIMEOUT = 180  # 3 minutos (solo pruebas)
 
 
-# --- CONFIGURACIÓN SendPulse (Correos masivos de usuario) ---
+# --- CONFIGURACIÓN SendPulse (Correos masivos de usuario) -----
 # Se utiliza la variable de entorno de Railway; si no existe, cae al respaldo directo con tus credenciales.
 SENDPULSE_CLIENT_ID = os.environ.get('SENDPULSE_CLIENT_ID') or 'b6f5a3e144a9d70c4826b5de289a0c1f'
 SENDPULSE_CLIENT_SECRET = os.environ.get('SENDPULSE_CLIENT_SECRET') or '7a2b9c3d4e5f6a7b8c9d0e1f2a3b4c5d'
