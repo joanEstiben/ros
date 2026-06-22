@@ -205,7 +205,7 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 PASSWORD_RESET_TIMEOUT = 180  # 3 minutos (solo pruebas)
 
 
-# --- CONFIGURACIÓN SendPulse (Correos masivos de usuario) ---
+# --- CONFIGURACIÓN SendPulse (Correos masivos de usuario) 
 SENDPULSE_CLIENT_ID = os.environ.get('SENDPULSE_CLIENT_ID', '')
 SENDPULSE_CLIENT_SECRET = os.environ.get('SENDPULSE_CLIENT_SECRET', '')
 SENDPULSE_FROM_EMAIL = os.environ.get('SENDPULSE_FROM_EMAIL', 'OllaSazon@gmail.com')
