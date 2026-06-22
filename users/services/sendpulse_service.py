@@ -277,3 +277,4 @@ def enviar_correo_pago_rechazado(pago) -> bool:
     except RuntimeError as exc:
         logger.error('Error enviando rechazo pago %s: %s', pago.pk, exc)
         return False
+    #uwu
