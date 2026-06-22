@@ -1,8 +1,5 @@
 import base64
 import logging
-import time
-import uuid
-
 import requests
 from django.conf import settings
 
@@ -31,92 +28,39 @@ def _headers(token: str) -> dict:
     return {'Authorization': f'Bearer {token}'}
 
 
-def _crear_lista_temporal(token: str, email: str, nombre: str) -> int:
-    """Crea una lista de un solo contacto y retorna su book_id."""
-    nombre_lista = f'reserva-tmp-{uuid.uuid4().hex[:8]}'
-    resp = requests.post(
-        f'{_SP_BASE}/addressbooks',
-        json={'bookName': nombre_lista},
-        headers=_headers(token),
-        timeout=10,
-    )
-    if not resp.ok:
-        raise RuntimeError(f'Error creando lista temporal: {resp.status_code} {resp.text}')
-    book_id = resp.json()['id']
-
-    resp = requests.post(
-        f'{_SP_BASE}/addressbooks/{book_id}/emails',
-        json={'emails': [{'email': email, 'variables': {'nombre': nombre}}]},
-        headers=_headers(token),
-        timeout=10,
-    )
-    if not resp.ok:
-        raise RuntimeError(f'Error agregando contacto: {resp.status_code} {resp.text}')
-    return book_id
-
-
-def _eliminar_lista(token: str, book_id: int) -> None:
-    """Elimina la lista temporal después de enviar."""
-    requests.delete(
-        f'{_SP_BASE}/addressbooks/{book_id}',
-        headers=_headers(token),
-        timeout=10,
-    )
-
-
-def _esperar_lista_lista(token: str, book_id: int, intentos: int = 6, espera: float = 3) -> None:
-    """Espera hasta que la lista tenga al menos 1 contacto activo."""
-    for _ in range(intentos):
-        resp = requests.get(
-            f'{_SP_BASE}/addressbooks/{book_id}',
-            headers=_headers(token),
-            timeout=10,
-        )
-        if resp.ok:
-            data = resp.json()
-            # La API devuelve lista o dict según versión
-            info = data[0] if isinstance(data, list) else data
-            if int(info.get('all_email_qty', 0)) > 0:
-                return
-        time.sleep(espera)
-    raise RuntimeError('El contacto no se registró en SendPulse a tiempo.')
-
-
-def _enviar_campana(token: str, book_id: int, subject: str, html: str) -> dict:
-    """Lanza una campaña hacia el book_id dado."""
-    campaign = {
-        'sender_name': settings.SENDPULSE_FROM_NAME,
-        'sender_email': settings.SENDPULSE_FROM_EMAIL,
-        'subject': subject,
-        'body': base64.b64encode(html.encode('utf-8')).decode('ascii'),
-        'list_id': book_id,
-    }
-    for _ in range(5):
-        resp = requests.post(
-            f'{_SP_BASE}/campaigns',
-            json=campaign,
-            headers=_headers(token),
-            timeout=15,
-        )
-        if resp.ok:
-            return resp.json()
-        code = resp.json().get('error_code')
-        if code in (709, 798):  # lista bloqueada o vacía: esperar
-            time.sleep(3)
-            continue
-        raise RuntimeError(f'Error creando campaña: {resp.status_code} {resp.text}')
-    raise RuntimeError('Lista bloqueada en SendPulse. Intenta de nuevo.')
-
-
 def _send_email(to_email: str, to_name: str, subject: str, html: str) -> dict:
-    """Envía un correo individual usando el sistema de campañas de SendPulse."""
+    """Envía un correo individual e inmediato usando el servicio transaccional (SMTP) de SendPulse."""
     token = _get_token()
-    book_id = _crear_lista_temporal(token, to_email, to_name)
-    try:
-        _esperar_lista_lista(token, book_id)
-        return _enviar_campana(token, book_id, subject, html)
-    finally:
-        _eliminar_lista(token, book_id)
+    
+    # Payload optimizado para la API de correos transaccionales de SendPulse
+    email_data = {
+        'email': {
+            'html': base64.b64encode(html.encode('utf-8')).decode('ascii'),
+            'subject': subject,
+            'from': {
+                'name': settings.SENDPULSE_FROM_NAME,
+                'email': settings.SENDPULSE_FROM_EMAIL,
+            },
+            'to': [
+                {
+                    'name': to_name,
+                    'email': to_email,
+                }
+            ],
+        }
+    }
+    
+    resp = requests.post(
+        f'{_SP_BASE}/smtp/emails',
+        json=email_data,
+        headers=_headers(token),
+        timeout=15,
+    )
+    
+    if not resp.ok:
+        raise RuntimeError(f'Error enviando correo transaccional: {resp.status_code} {resp.text}')
+        
+    return resp.json()
 
 
 def _build_html(titulo: str, mensaje: str, color_acento: str) -> str:
@@ -323,7 +267,7 @@ def enviar_correo_pago_rechazado(pago) -> bool:
     motivo = pago.motivo_rechazo or 'No especificado'
 
     html = _build_html(
-        titulo='&#10007; Pago Rechazado',
+        titulo='&#10007; Pago grid-Rechazado',
         mensaje=(
             f'Hola <strong>{nombre}</strong>,<br><br>'
             'Tu pago fue rechazado.<br><br>'
