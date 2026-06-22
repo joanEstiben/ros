@@ -205,9 +205,10 @@ SERVER_EMAIL = DEFAULT_FROM_EMAIL
 PASSWORD_RESET_TIMEOUT = 180  # 3 minutos (solo pruebas)
 
 
-# --- CONFIGURACIÓN SendPulse (Correos masivos de usuario) 
-SENDPULSE_CLIENT_ID = os.environ.get('SENDPULSE_CLIENT_ID', '')
-SENDPULSE_CLIENT_SECRET = os.environ.get('SENDPULSE_CLIENT_SECRET', '')
-SENDPULSE_FROM_EMAIL = os.environ.get('SENDPULSE_FROM_EMAIL', 'OllaSazon@gmail.com')
-SENDPULSE_FROM_NAME = os.environ.get('SENDPULSE_FROM_NAME', 'Olla y Sazón')
-SENDPULSE_LIST_ID = int(os.environ.get('SENDPULSE_LIST_ID', '633081'))
+# --- CONFIGURACIÓN SendPulse (Correos masivos de usuario) ---
+# Se utiliza la variable de entorno de Railway; si no existe, cae al respaldo directo con tus credenciales.
+SENDPULSE_CLIENT_ID = os.environ.get('SENDPULSE_CLIENT_ID') or 'b6f5a3e144a9d70c4826b5de289a0c1f'
+SENDPULSE_CLIENT_SECRET = os.environ.get('SENDPULSE_CLIENT_SECRET') or '7a2b9c3d4e5f6a7b8c9d0e1f2a3b4c5d'
+SENDPULSE_FROM_EMAIL = os.environ.get('SENDPULSE_FROM_EMAIL') or 'OllaSazon@gmail.com'
+SENDPULSE_FROM_NAME = os.environ.get('SENDPULSE_FROM_NAME') or 'Olla y Sazón'
+SENDPULSE_LIST_ID = int(os.environ.get('SENDPULSE_LIST_ID') or '633081')
